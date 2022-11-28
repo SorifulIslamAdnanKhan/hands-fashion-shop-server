@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion, MongoRuntimeError } = require('mongodb');
+const { MongoClient, ServerApiVersion, MongoRuntimeError, ObjectId } = require('mongodb');
 
 require('dotenv').config();
 
@@ -20,6 +20,7 @@ async function run(){
     try{
 
         const usersCollection = client.db("handsFashionShop").collection("users");
+        const categoriesCollection = client.db("handsFashionShop").collection("categories");
 
         // Users API
 
@@ -30,12 +31,46 @@ async function run(){
                 return res.send({status: 0, message: 'User already exist.'})
             }
             
-            console.log(user);
             const result = await usersCollection.insertOne(user);
             res.send(result);
         });
 
-        
+        app.get('/users/admin/:email', async (req, res)=>{
+            const email = req.params.email;
+            const query = {email};
+            const user = await usersCollection.findOne(query);
+            res.send({isAdmin: user?.role === 'Admin'})
+        });
+
+        app.get('/users/seller/:email', async (req, res)=>{
+            const email = req.params.email;
+            const query = {email};
+            const user = await usersCollection.findOne(query);
+            res.send({isSeller: user?.role === 'Seller'})
+        });
+
+        app.get('/users/buyer/:email', async (req, res)=>{
+            const email = req.params.email;
+            const query = {email};
+            const user = await usersCollection.findOne(query);
+            res.send({isBuyer: user?.role === 'Buyer'})
+        });
+
+
+        // Category API
+
+        app.get('/categories', async (req, res)=>{
+            const query = {};
+            const categories = await categoriesCollection.find(query).toArray();
+            res.send(categories);
+        });
+
+        app.get('/categories/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) }
+            const result = await categoriesCollection.findOne(filter);
+            res.send(result)
+        });
 
     }
     finally{
