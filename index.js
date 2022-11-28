@@ -57,6 +57,34 @@ async function run() {
             res.send({ isBuyer: user?.role === 'Buyer' })
         });
 
+        app.get('/users/sellers', async(req, res)=>{
+            const role = req.params.role;
+            const query = {role: 'Seller'}
+            const sellers = await usersCollection.find(query).toArray();
+            res.send(sellers);
+        });
+
+        app.get('/users/buyers', async(req, res)=>{
+            const role = req.params.role;
+            const query = {role: 'Buyer'}
+            const buyers = await usersCollection.find(query).toArray();
+            res.send(buyers);
+        });
+
+        app.delete('/users/seller/:id', async (req, res)=>{
+            const id = req.params.id;
+            const query = {_id:ObjectId(id)};
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.delete('/users/buyer/:id', async (req, res)=>{
+            const id = req.params.id;
+            const query = {_id:ObjectId(id)};
+            const result = await usersCollection.deleteOne(query);
+            res.send(result);
+        });
+
 
         // Category API
 
@@ -80,6 +108,26 @@ async function run() {
             const postDate = new Date();
             const salesStatus = 'Available';
             const result = await productsCollection.insertOne({ ...product, postDate, salesStatus });
+            res.send(result);
+        });
+
+        app.patch('/product/:id', async (req, res)=>{
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const advertise = req.body.advertise;
+            const updatedDoc = {
+                $set: {
+                    advertise: 'True',
+                }
+            }
+            const result = await productsCollection.updateOne(query, updatedDoc);
+            res.send(result);
+        });
+
+        app.get('/product/advertise', async (req, res)=>{
+            const advertise = req.params.advertise;
+            const query = {advertise: 'True'};
+            const result = await productsCollection.find(query).toArray();
             res.send(result);
         });
 
