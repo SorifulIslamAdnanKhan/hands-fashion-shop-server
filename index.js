@@ -3,10 +3,11 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, MongoRuntimeError, ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
 
-// middleware
+// Middleware
 
 app.use(cors());
 app.use(express.json());
@@ -15,15 +16,49 @@ app.use(express.json());
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.3aa5vlu.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
+// Verify JWT
+
+function verifyJWT (req, res, next){
+    const authHeader = req.headers.authorization;
+    if(!authHeader){
+        return res.status(401).send({message: 'Unauthorized access'})
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_JWT_TOKEN, function(err, decoded){
+        if(err){
+            return res.status(403).send({message: 'Forbidden access'})
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
 
 async function run() {
     try {
+       
+        // Database Collections
 
         const usersCollection = client.db("handsFashionShop").collection("users");
         const categoriesCollection = client.db("handsFashionShop").collection("categories");
         const productsCollection = client.db("handsFashionShop").collection("products");
         const ordersCollection = client.db("handsFashionShop").collection("orders");
 
+        // JWT API
+
+        app.get('/jwt', async(req, res)=>{
+            const email = req.query.email;
+            const query = {email: email}
+            const user = await usersCollection.findOne(query);
+            if(user){
+                const token = jwt.sign({email}, process.env.ACCESS_JWT_TOKEN, {expiresIn: '1h'})
+                return res.send({accessAuthToken: token});
+            }
+            
+            res.status(403).send({accessAuthToken: ''})
+        });
+        
         // Admin, Sellers and Buyers API
 
         app.post('/users', async (req, res) => {
@@ -85,7 +120,6 @@ async function run() {
             const result = await usersCollection.deleteOne(query);
             res.send(result);
         });
-
 
         // Category API
 
@@ -171,12 +205,13 @@ async function run() {
         // Orders API
 
         app.post('/order', async (req, res) => {
-            const product = req.body;
-            const result = await ordersCollection.insertOne(product);
+            const order = req.body;
+            const result = await ordersCollection.insertOne(order);
             res.send(result);
         });
 
         app.get('/orders', async (req, res)=>{
+
             let query = {};
 
             if(req.query.email){
@@ -188,7 +223,7 @@ async function run() {
             const cursor = ordersCollection.find(query);
             const orders = await cursor.toArray();
             res.send(orders);
-        })
+        });
 
     }
     finally {
