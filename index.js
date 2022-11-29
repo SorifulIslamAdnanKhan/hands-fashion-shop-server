@@ -22,8 +22,9 @@ async function run() {
         const usersCollection = client.db("handsFashionShop").collection("users");
         const categoriesCollection = client.db("handsFashionShop").collection("categories");
         const productsCollection = client.db("handsFashionShop").collection("products");
+        const ordersCollection = client.db("handsFashionShop").collection("orders");
 
-        // Users API
+        // Admin, Sellers and Buyers API
 
         app.post('/users', async (req, res) => {
             const user = req.body;
@@ -166,6 +167,28 @@ async function run() {
             const result = await productsCollection.deleteOne(query);
             res.send(result);
         });
+
+        // Orders API
+
+        app.post('/order', async (req, res) => {
+            const product = req.body;
+            const result = await ordersCollection.insertOne(product);
+            res.send(result);
+        });
+
+        app.get('/orders', async (req, res)=>{
+            let query = {};
+
+            if(req.query.email){
+                query= {
+                    email: req.query.email
+                }
+            }
+
+            const cursor = ordersCollection.find(query);
+            const orders = await cursor.toArray();
+            res.send(orders);
+        })
 
     }
     finally {
