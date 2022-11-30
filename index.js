@@ -270,14 +270,14 @@ async function run() {
                 }
             }
             const updatedResult = await ordersCollection.updateOne(filter, updatedDoc);
-            
-            const filterProduct = {_id: ObjectId(payment.orderId)};
+            const filterProduct = {_id: ObjectId(payment.productId)};
             const upadteSaleStatus = {
                 $set:{
                     salesStatus: 'Sold',
+                    advertise: 'False'
                 }
             }
-            const updatedSaleStatus = await productsCollection.updateOne(filterProduct, upadteSaleStatus)
+            const updatedSaleStatus = await productsCollection.updateOne(filterProduct, upadteSaleStatus);
             res.send(result);
         });
 
