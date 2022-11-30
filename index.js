@@ -262,13 +262,22 @@ async function run() {
             const result = await paymentsCollection.insertOne(payment);
             const id = payment.orderId;
             const filter = {_id: ObjectId(id)};
+            
             const updatedDoc = {
                 $set:{
                     paid: true,
                     transactionId: payment.transactionId
                 }
             }
-            const updatedResult = await ordersCollection.updateOne(filter, updatedDoc)
+            const updatedResult = await ordersCollection.updateOne(filter, updatedDoc);
+            
+            const filterProduct = {_id: ObjectId(payment.orderId)};
+            const upadteSaleStatus = {
+                $set:{
+                    salesStatus: 'Sold',
+                }
+            }
+            const updatedSaleStatus = await productsCollection.updateOne(filterProduct, upadteSaleStatus)
             res.send(result);
         });
 
