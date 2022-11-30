@@ -6,6 +6,8 @@ const { MongoClient, ServerApiVersion, MongoRuntimeError, ObjectId } = require('
 const jwt = require('jsonwebtoken');
 
 require('dotenv').config();
+const stripe = require("stripe")(process.env.STRIPE_KEY);
+
 
 // Middleware
 
@@ -44,6 +46,7 @@ async function run() {
         const categoriesCollection = client.db("handsFashionShop").collection("categories");
         const productsCollection = client.db("handsFashionShop").collection("products");
         const ordersCollection = client.db("handsFashionShop").collection("orders");
+        const paymentsCollection = client.db("handsFashionShop").collection("payments");
 
         // JWT API
 
@@ -223,6 +226,50 @@ async function run() {
             const cursor = ordersCollection.find(query);
             const orders = await cursor.toArray();
             res.send(orders);
+        });
+
+        app.get('/orders/:id', async (req, res)=>{
+            const id = req.params.id;
+            const query = {_id: ObjectId(id)};
+            const order = await ordersCollection.findOne(query);
+            res.send(order);
+        });
+
+        // Stripe
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res)=>{
+            const order = req.body;
+            const price = order.resalePrice;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount: amount,
+                "payment_method_types": [
+                    "card"
+                  ]
+            })
+
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        });
+
+        // Payment
+
+        app.post('/payments', verifyJWT, async (req, res)=>{
+            const payment = req.body;
+            const result = await paymentsCollection.insertOne(payment);
+            const id = payment.orderId;
+            const filter = {_id: ObjectId(id)};
+            const updatedDoc = {
+                $set:{
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+            const updatedResult = await ordersCollection.updateOne(filter, updatedDoc)
+            res.send(result);
         });
 
     }
